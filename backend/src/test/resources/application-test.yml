@@ -1,0 +1,7 @@
+# Loaded on top of application.yml when the "test" profile is active (integration tests only).
+# The tests wipe data, so they read a SEPARATE schema from TEST_DB_URL, never DB_URL.
+spring:
+  datasource:
+    url: ${TEST_DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
