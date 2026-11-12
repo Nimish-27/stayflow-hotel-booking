@@ -8,6 +8,8 @@ public record StayQuote(
         LocalDate checkIn,
         LocalDate checkOut,
         int nights,
+        BigDecimal subtotal,
+        BigDecimal gstAmount,
         BigDecimal totalPrice,
         int roomsAvailable) {
 }

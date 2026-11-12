@@ -6,6 +6,7 @@ A full-stack hotel booking application with a Spring Boot API, MySQL persistence
 
 - Search hotels by location and stay dates
 - View availability, pricing, and alternative dates
+- View an 18% GST breakdown before booking
 - Create, retrieve, and cancel bookings
 - Case-insensitive booking email lookup
 - MySQL-backed inventory with transactional booking logic

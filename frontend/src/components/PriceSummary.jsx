@@ -18,7 +18,11 @@ export default function PriceSummary({ pricePerNight, quote, loading, hasDates }
       <dl>
         <div className="row">
           <dt>{formatMoney(pricePerNight)} × {pluralize(quote.nights, 'night')}</dt>
-          <dd>{formatMoney(quote.totalPrice)}</dd>
+          <dd>{formatMoney(quote.subtotal)}</dd>
+        </div>
+        <div className="row">
+          <dt>GST (18%)</dt>
+          <dd>{formatMoney(quote.gstAmount)}</dd>
         </div>
         <div className="row total">
           <dt>Total</dt>

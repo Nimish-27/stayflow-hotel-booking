@@ -8,7 +8,7 @@ export default function ConfirmationPage() {
     return (
       <section>
         <h1>No booking to show</h1>
-        <p>This page only appears right after booking. To look up a booking, use your reference and email.</p>
+        <p>Use your booking reference and email to look up your reservation.</p>
         <Link className="button" to="/manage">Manage a booking</Link>
       </section>
     );
@@ -19,7 +19,7 @@ export default function ConfirmationPage() {
       <h1>Booking confirmed</h1>
       <p>
         Keep your reference and the email you used. You need both to view or cancel the booking.
-        No confirmation email is sent by this project.
+        Free cancellation is available until 48 hours before check-in.
       </p>
       <BookingDetails booking={booking} />
       <div className="actions">

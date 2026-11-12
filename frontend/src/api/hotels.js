@@ -11,3 +11,7 @@ export function getHotel(id, { checkIn, checkOut } = {}) {
 export function getAlternatives(id, checkIn, checkOut) {
   return request(`/hotels/${encodeURIComponent(id)}/alternatives`, { params: { checkIn, checkOut } });
 }
+
+export function getAvailability(id, from, to) {
+  return request(`/hotels/${encodeURIComponent(id)}/availability`, { params: { from, to } });
+}

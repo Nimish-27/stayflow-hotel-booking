@@ -85,7 +85,7 @@ class HotelServiceTest {
 
         assertThat(response.quote().roomsAvailable()).isEqualTo(2);
         assertThat(response.quote().nights()).isEqualTo(3);
-        assertThat(response.quote().totalPrice()).isEqualByComparingTo("9000.00");
+        assertThat(response.quote().totalPrice()).isEqualByComparingTo("10620.00");
     }
 
     @Test

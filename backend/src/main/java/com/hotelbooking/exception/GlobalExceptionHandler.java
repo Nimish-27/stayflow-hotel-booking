@@ -55,6 +55,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(CancellationNotAllowedException.class)
+    public ResponseEntity<Object> handleCancellationNotAllowed(
+            CancellationNotAllowedException ex, WebRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
     /** Last resort: log the details on the server, tell the client nothing internal. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleUnexpected(Exception ex, WebRequest request) {

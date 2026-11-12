@@ -12,7 +12,8 @@ public record BookingRules(
         @Min(1) int windowDays,
         @Min(1) int inventorySeedDays,
         @Min(1) int alternativeShiftDays,
-        @Min(1) int maxAlternatives) {
+        @Min(1) int maxAlternatives,
+        @Min(1) int freeCancellationHours) {
 
     public BookingRules {
         if (inventorySeedDays < windowDays) {

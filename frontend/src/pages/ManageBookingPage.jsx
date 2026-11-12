@@ -69,6 +69,7 @@ export default function ManageBookingPage() {
   return (
     <section className="narrow">
       <h1>Manage your booking</h1>
+      <p className="muted small">Free cancellation is available until 48 hours before check-in.</p>
       <form className="card" onSubmit={handleFind} noValidate>
         <TextField
           label="Booking reference"
@@ -98,7 +99,7 @@ export default function ManageBookingPage() {
       {booking && (
         <>
           <BookingDetails booking={booking} />
-          {booking.status === 'BOOKED' && (
+          {booking.status === 'CONFIRMED' && (
             <div className="actions">
               <button type="button" className="button button-danger" disabled={busy} onClick={handleCancel}>
                 Cancel booking

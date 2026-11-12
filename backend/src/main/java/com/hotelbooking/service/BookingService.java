@@ -2,10 +2,12 @@ package com.hotelbooking.service;
 
 import com.hotelbooking.dto.BookingResponse;
 import com.hotelbooking.dto.CreateBookingRequest;
+import com.hotelbooking.config.BookingRules;
 import com.hotelbooking.entity.Booking;
 import com.hotelbooking.entity.Hotel;
 import com.hotelbooking.entity.RoomInventory;
 import com.hotelbooking.exception.BookingNotFoundException;
+import com.hotelbooking.exception.CancellationNotAllowedException;
 import com.hotelbooking.exception.HotelNotFoundException;
 import com.hotelbooking.exception.SoldOutException;
 import com.hotelbooking.mapper.BookingMapper;
@@ -15,6 +17,7 @@ import com.hotelbooking.repository.RoomInventoryRepository;
 import com.hotelbooking.util.InputNormalizer;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,12 +45,13 @@ public class BookingService {
     private final BookingReferenceGenerator referenceGenerator;
     private final BookingMapper bookingMapper;
     private final Clock clock;
+    private final BookingRules bookingRules;
 
     public BookingService(BookingRepository bookingRepository, HotelRepository hotelRepository,
                           RoomInventoryRepository inventoryRepository, StayValidator stayValidator,
                           PriceCalculator priceCalculator, AvailabilityCalculator availabilityCalculator,
                           BookingReferenceGenerator referenceGenerator, BookingMapper bookingMapper,
-                          Clock clock) {
+                          Clock clock, BookingRules bookingRules) {
         this.bookingRepository = bookingRepository;
         this.hotelRepository = hotelRepository;
         this.inventoryRepository = inventoryRepository;
@@ -57,6 +61,7 @@ public class BookingService {
         this.referenceGenerator = referenceGenerator;
         this.bookingMapper = bookingMapper;
         this.clock = clock;
+        this.bookingRules = bookingRules;
     }
 
     /** One transaction: lock the nights, check every night, increment every night, insert the booking. */
@@ -106,6 +111,15 @@ public class BookingService {
         if (booking.isCancelled()) {
             log.info("Booking {} was already cancelled, nothing to release", booking.getReference());
             return bookingMapper.toResponse(booking);
+        }
+        ZonedDateTime cancellationDeadline = booking.getCheckIn()
+                .atStartOfDay(clock.getZone())
+                .minusHours(bookingRules.freeCancellationHours());
+        if (Instant.now(clock).isAfter(cancellationDeadline.toInstant())) {
+            throw new CancellationNotAllowedException(
+                    "Free cancellation is available until "
+                            + bookingRules.freeCancellationHours()
+                            + " hours before check-in");
         }
 
         Long hotelId = booking.getHotel().getId();

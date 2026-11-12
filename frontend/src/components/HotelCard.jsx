@@ -33,7 +33,7 @@ export default function HotelCard({ hotel }) {
           )}
           {quote && soldOut && <span className="badge badge-danger">Sold out for these dates</span>}
           {quote && !soldOut && (
-            <span className="badge badge-ok">{pluralize(quote.roomsAvailable, 'room')} left</span>
+            <span className="badge badge-ok">Only {quote.roomsAvailable} {pluralize(quote.roomsAvailable, 'room')} left</span>
           )}
         </div>
         <Link className="button" to={`/hotels/${hotel.id}${search}`}>

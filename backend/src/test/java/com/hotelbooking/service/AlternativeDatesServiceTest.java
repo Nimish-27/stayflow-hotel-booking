@@ -64,7 +64,7 @@ class AlternativeDatesServiceTest {
                 .containsExactly(checkIn.minusDays(3), checkIn.plusDays(3), checkIn.minusDays(4));
         assertThat(alternatives).allSatisfy(quote -> {
             assertThat(quote.nights()).isEqualTo(NIGHTS);
-            assertThat(quote.totalPrice()).isEqualByComparingTo("9000.00");
+            assertThat(quote.totalPrice()).isEqualByComparingTo("10620.00");
             assertThat(quote.roomsAvailable()).isEqualTo(TOTAL_ROOMS);
         });
     }

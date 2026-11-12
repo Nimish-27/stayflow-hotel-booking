@@ -3,6 +3,8 @@ import { validateSearchDates } from '../utils/dates';
 import DateRangeFields from './DateRangeFields.jsx';
 import TextField from './TextField.jsx';
 
+const HOTEL_LOCATIONS = ['Goa', 'Jaipur', 'Mumbai', 'Bengaluru', 'Manali', 'Kochi'];
+
 export default function SearchBar({ initialValues = {}, onSearch }) {
   const [location, setLocation] = useState(initialValues.location ?? '');
   const [dates, setDates] = useState({
@@ -34,7 +36,11 @@ export default function SearchBar({ initialValues = {}, onSearch }) {
           placeholder="e.g. Goa (leave empty for all)"
           value={location}
           onChange={(event) => setLocation(event.target.value)}
+          list="hotel-locations"
         />
+        <datalist id="hotel-locations">
+          {HOTEL_LOCATIONS.map((item) => <option key={item} value={item} />)}
+        </datalist>
         <DateRangeFields
           idPrefix="search"
           checkIn={dates.checkIn}

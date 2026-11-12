@@ -31,12 +31,12 @@ class PriceCalculatorTest {
     void totalIsNightsTimesPriceWithoutRoundingErrors() {
         BigDecimal total = calculator.total(new BigDecimal("1999.99"), 3);
 
-        assertThat(total).isEqualByComparingTo("5999.97");
+        assertThat(total).isEqualByComparingTo("7079.96");
     }
 
     @Test
     void totalAlwaysHasTwoDecimalPlaces() {
-        assertThat(calculator.total(new BigDecimal("3000.00"), 2).toPlainString()).isEqualTo("6000.00");
+        assertThat(calculator.total(new BigDecimal("3000.00"), 2).toPlainString()).isEqualTo("7080.00");
     }
 
     @Test
@@ -49,7 +49,9 @@ class PriceCalculatorTest {
         assertThat(quote.checkIn()).isEqualTo(checkIn);
         assertThat(quote.checkOut()).isEqualTo(checkOut);
         assertThat(quote.nights()).isEqualTo(2);
-        assertThat(quote.totalPrice()).isEqualByComparingTo("6000.00");
+        assertThat(quote.subtotal()).isEqualByComparingTo("6000.00");
+        assertThat(quote.gstAmount()).isEqualByComparingTo("1080.00");
+        assertThat(quote.totalPrice()).isEqualByComparingTo("7080.00");
         assertThat(quote.roomsAvailable()).isEqualTo(4);
     }
 }

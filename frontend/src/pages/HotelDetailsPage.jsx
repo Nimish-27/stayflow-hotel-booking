@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createBooking } from '../api/bookings';
 import { ApiError } from '../api/client';
-import { getAlternatives, getHotel } from '../api/hotels';
+import { getAlternatives, getAvailability, getHotel } from '../api/hotels';
 import AlternativeDates from '../components/AlternativeDates.jsx';
 import DateRangeFields from '../components/DateRangeFields.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import Loader from '../components/Loader.jsx';
 import PriceSummary from '../components/PriceSummary.jsx';
 import TextField from '../components/TextField.jsx';
-import { validateStay } from '../utils/dates';
+import { addDays, isFreeCancellationClosed, todayIso, validateStay } from '../utils/dates';
 import { formatMoney } from '../utils/format';
 import { buildSearch } from '../utils/query';
 import { validateGuest } from '../utils/validation';
@@ -29,6 +29,8 @@ export default function HotelDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [availability, setAvailability] = useState([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
   const [alternatives, setAlternatives] = useState([]);
   const [alternativesLoading, setAlternativesLoading] = useState(false);
@@ -46,9 +48,21 @@ export default function HotelDetailsPage() {
       : null;
   const soldOut = quote !== null && quote.roomsAvailable === 0;
   const canBook = quote !== null && !soldOut && !loading && !submitting;
+  const currentAvailability = availability.find((day) => day.date === todayIso());
 
   const soldOutCheckIn = soldOut ? quote.checkIn : '';
   const soldOutCheckOut = soldOut ? quote.checkOut : '';
+
+  useEffect(() => {
+    let ignore = false;
+    const from = todayIso();
+    setAvailabilityLoading(true);
+    getAvailability(id, from, addDays(from, 365))
+      .then((data) => { if (!ignore) setAvailability(data); })
+      .catch(() => { if (!ignore) setAvailability([]); })
+      .finally(() => { if (!ignore) setAvailabilityLoading(false); });
+    return () => { ignore = true; };
+  }, [id, refreshKey]);
 
   // Load the hotel plus the server quote for the selected dates.
   useEffect(() => {
@@ -171,17 +185,37 @@ export default function HotelDetailsPage() {
           <p className="price">
             {formatMoney(hotel.pricePerNight)} <span className="muted">/ night</span>
           </p>
+          {quote && !soldOut && (
+            <p className="badge badge-ok" role="status">
+              Only {quote.roomsAvailable} {quote.roomsAvailable === 1 ? 'room' : 'rooms'} left for these dates
+            </p>
+          )}
+          {quote && soldOut && (
+            <p className="badge badge-danger" role="status">Sold out for these dates</p>
+          )}
         </div>
 
         <div className="booking-column">
           <form className="card" onSubmit={handleSubmit} noValidate>
             <h2>Book your stay</h2>
             <ErrorBanner message={loadError} />
+            {!hasValidDates && currentAvailability && (
+              <p className={`badge ${currentAvailability.roomsAvailable === 0 ? 'badge-danger' : 'badge-ok'}`}>
+                {currentAvailability.roomsAvailable === 0
+                  ? 'Sold out today'
+                  : `Only ${currentAvailability.roomsAvailable} ${
+                    currentAvailability.roomsAvailable === 1 ? 'room' : 'rooms'
+                  } available today`}
+              </p>
+            )}
 
             <DateRangeFields
               idPrefix="booking"
+              hotelId={id}
               checkIn={checkIn}
               checkOut={checkOut}
+              availability={availability}
+              availabilityLoading={availabilityLoading}
               onChange={handleDatesChange}
             />
             {stayError && <p className="field-error" role="alert">{stayError}</p>}
@@ -192,6 +226,11 @@ export default function HotelDetailsPage() {
               loading={loading}
               hasDates={hasValidDates}
             />
+            {hasValidDates && isFreeCancellationClosed(checkIn) && (
+              <div className="banner banner-error" role="note">
+                Free cancellation is no longer available because check-in is within 48 hours.
+              </div>
+            )}
 
             <TextField
               label="Full name"

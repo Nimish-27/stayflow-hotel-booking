@@ -31,7 +31,7 @@ class BookingFlowIntegrationTest extends AbstractIntegrationTest {
         // book
         BookingResponse booked = bookingService.createBooking(request(ASHA, checkIn, checkOut));
         assertThat(booked.reference()).matches("HB-[A-HJ-NP-Z2-9]{8}");
-        assertThat(booked.totalAmount()).isEqualByComparingTo("3000.00");
+        assertThat(booked.totalAmount()).isEqualByComparingTo("3540.00");
         assertThat(booked.status()).isEqualTo(BookingStatus.CONFIRMED);
         assertThat(bookedRooms(checkIn)).isEqualTo(1);
         assertThat(bookedRooms(checkOut.minusDays(1))).isEqualTo(1);

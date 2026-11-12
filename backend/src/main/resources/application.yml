@@ -29,3 +29,4 @@ app:
     inventory-seed-days: 372       # window + 7-day safety buffer
     alternative-shift-days: 7
     max-alternatives: 3
+    free-cancellation-hours: 48

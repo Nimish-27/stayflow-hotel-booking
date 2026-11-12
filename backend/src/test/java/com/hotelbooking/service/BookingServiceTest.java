@@ -22,6 +22,7 @@ import com.hotelbooking.entity.Booking;
 import com.hotelbooking.entity.BookingStatus;
 import com.hotelbooking.entity.RoomInventory;
 import com.hotelbooking.exception.BookingNotFoundException;
+import com.hotelbooking.exception.CancellationNotAllowedException;
 import com.hotelbooking.exception.HotelNotFoundException;
 import com.hotelbooking.exception.InvalidStayException;
 import com.hotelbooking.exception.SoldOutException;
@@ -39,6 +40,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class BookingServiceTest {
@@ -64,7 +66,7 @@ class BookingServiceTest {
         // Pure classes are real; only the database and the random generator are mocked.
         service = new BookingService(bookingRepository, hotelRepository, inventoryRepository,
                 new StayValidator(RULES, CLOCK), new PriceCalculator(), new AvailabilityCalculator(),
-                referenceGenerator, new BookingMapper(), CLOCK);
+                referenceGenerator, new BookingMapper(), CLOCK, RULES);
     }
 
     // ---- create ----
@@ -80,7 +82,7 @@ class BookingServiceTest {
 
         assertThat(response.reference()).isEqualTo(REFERENCE);
         assertThat(response.nights()).isEqualTo(3);
-        assertThat(response.totalAmount()).isEqualByComparingTo("9000.00");
+        assertThat(response.totalAmount()).isEqualByComparingTo("10620.00");
         assertThat(response.status()).isEqualTo(BookingStatus.CONFIRMED);
         assertThat(response.guestName()).isEqualTo("Asha");
         assertThat(response.guestEmail()).isEqualTo(EMAIL);
@@ -209,6 +211,18 @@ class BookingServiceTest {
 
         assertThatThrownBy(() -> service.cancelBooking(REFERENCE, "other@example.com"))
                 .isInstanceOf(BookingNotFoundException.class);
+    }
+
+    @Test
+    void rejectsCancellationWithinTheFreeCancellationWindow() {
+        Booking booking = confirmedBooking();
+        ReflectionTestUtils.setField(booking, "checkIn", TODAY.plusDays(1));
+        when(bookingRepository.findForUpdate(REFERENCE, EMAIL)).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> service.cancelBooking(REFERENCE, EMAIL))
+                .isInstanceOf(CancellationNotAllowedException.class)
+                .hasMessage("Free cancellation is available until 48 hours before check-in");
+        verifyNoInteractions(inventoryRepository);
 
         verifyNoInteractions(inventoryRepository);
     }

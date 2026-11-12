@@ -18,7 +18,7 @@ final class TestFixtures {
     static final ZoneId ZONE = ZoneId.of("Asia/Kolkata");
     static final Clock CLOCK = Clock.fixed(Instant.parse("2025-06-10T06:00:00Z"), ZONE);
     static final LocalDate TODAY = LocalDate.of(2025, 6, 10);
-    static final BookingRules RULES = new BookingRules(30, 365, 372, 7, 3);
+    static final BookingRules RULES = new BookingRules(30, 365, 372, 7, 3, 48);
     static final Long HOTEL_ID = 1L;
 
     private TestFixtures() {
