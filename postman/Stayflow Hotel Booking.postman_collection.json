@@ -1,0 +1,289 @@
+{
+  "info": {
+    "_postman_id": "f5f8e3d2-8e38-4fd8-9d6d-2a6d9a1f7f5a",
+    "name": "Stayflow Hotel Booking API",
+    "description": "Postman requests for the Stayflow hotel booking backend. Start the backend on http://localhost:8080, then run Create booking before Retrieve booking or Cancel booking.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "hotelId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "roomType",
+      "value": "Standard Room",
+      "type": "string"
+    },
+    {
+      "key": "checkIn",
+      "value": "2026-12-10",
+      "type": "string"
+    },
+    {
+      "key": "checkOut",
+      "value": "2026-12-13",
+      "type": "string"
+    },
+    {
+      "key": "guestName",
+      "value": "Asha Sharma",
+      "type": "string"
+    },
+    {
+      "key": "guestEmail",
+      "value": "asha@example.com",
+      "type": "string"
+    },
+    {
+      "key": "bookingReference",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Hotels",
+      "item": [
+        {
+          "name": "Search hotels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hotels?location=Goa&checkIn={{checkIn}}&checkOut={{checkOut}}&roomType={{roomType}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hotels"
+              ],
+              "query": [
+                {
+                  "key": "location",
+                  "value": "Goa"
+                },
+                {
+                  "key": "checkIn",
+                  "value": "{{checkIn}}"
+                },
+                {
+                  "key": "checkOut",
+                  "value": "{{checkOut}}"
+                },
+                {
+                  "key": "roomType",
+                  "value": "{{roomType}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get hotel quote",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hotels/{{hotelId}}?checkIn={{checkIn}}&checkOut={{checkOut}}&roomType={{roomType}}&rooms=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hotels",
+                "{{hotelId}}"
+              ],
+              "query": [
+                {
+                  "key": "checkIn",
+                  "value": "{{checkIn}}"
+                },
+                {
+                  "key": "checkOut",
+                  "value": "{{checkOut}}"
+                },
+                {
+                  "key": "roomType",
+                  "value": "{{roomType}}"
+                },
+                {
+                  "key": "rooms",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get availability calendar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hotels/{{hotelId}}/availability?from={{checkIn}}&to={{checkOut}}&roomType={{roomType}}&rooms=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hotels",
+                "{{hotelId}}",
+                "availability"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{checkIn}}"
+                },
+                {
+                  "key": "to",
+                  "value": "{{checkOut}}"
+                },
+                {
+                  "key": "roomType",
+                  "value": "{{roomType}}"
+                },
+                {
+                  "key": "rooms",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Find alternative dates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hotels/{{hotelId}}/alternatives?checkIn={{checkIn}}&checkOut={{checkOut}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hotels",
+                "{{hotelId}}",
+                "alternatives"
+              ],
+              "query": [
+                {
+                  "key": "checkIn",
+                  "value": "{{checkIn}}"
+                },
+                {
+                  "key": "checkOut",
+                  "value": "{{checkOut}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Create booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Booking was created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('bookingReference', body.reference);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hotelId\": {{hotelId}},\n  \"guestName\": \"{{guestName}}\",\n  \"guestEmail\": \"{{guestEmail}}\",\n  \"checkIn\": \"{{checkIn}}\",\n  \"checkOut\": \"{{checkOut}}\",\n  \"roomType\": \"{{roomType}}\",\n  \"adults\": 2,\n  \"children\": 0,\n  \"rooms\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Retrieve booking",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/{{bookingReference}}?email={{guestEmail}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "{{bookingReference}}"
+              ],
+              "query": [
+                {
+                  "key": "email",
+                  "value": "{{guestEmail}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel booking",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/{{bookingReference}}/cancel?email={{guestEmail}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "{{bookingReference}}",
+                "cancel"
+              ],
+              "query": [
+                {
+                  "key": "email",
+                  "value": "{{guestEmail}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
