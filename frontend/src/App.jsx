@@ -16,6 +16,7 @@ export default function App() {
             <span>stay<span className="brand-accent">well</span></span>
           </Link>
           <nav>
+            <NavLink to="/">Home</NavLink>
             <NavLink to="/hotels">Hotels</NavLink>
             <NavLink to="/manage" className="nav-cta">Manage booking</NavLink>
           </nav>

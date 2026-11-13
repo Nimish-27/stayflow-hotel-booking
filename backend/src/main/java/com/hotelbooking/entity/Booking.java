@@ -34,7 +34,14 @@ public class Booking {
     private LocalDate checkIn;
     private LocalDate checkOut;
     private int nights;
+    private BigDecimal subtotalAmount;
+    private BigDecimal gstRate;
+    private BigDecimal gstAmount;
     private BigDecimal totalAmount;
+    private String roomType;
+    private int adults;
+    private int children;
+    private int rooms;
 
     @Enumerated(EnumType.STRING)
     private BookingStatus status;
@@ -47,8 +54,9 @@ public class Booking {
     }
 
     public Booking(String reference, Hotel hotel, String guestName, String guestEmail,
-                   LocalDate checkIn, LocalDate checkOut, int nights, BigDecimal totalAmount,
-                   Instant createdAt) {
+                   LocalDate checkIn, LocalDate checkOut, int nights, BigDecimal subtotalAmount,
+                   BigDecimal gstRate, BigDecimal gstAmount, BigDecimal totalAmount,
+                   Instant createdAt, String roomType, int adults, int children, int rooms) {
         this.reference = reference;
         this.hotel = hotel;
         this.guestName = guestName;
@@ -56,7 +64,14 @@ public class Booking {
         this.checkIn = checkIn;
         this.checkOut = checkOut;
         this.nights = nights;
+        this.subtotalAmount = subtotalAmount;
+        this.gstRate = gstRate;
+        this.gstAmount = gstAmount;
         this.totalAmount = totalAmount;
+        this.roomType = roomType;
+        this.adults = adults;
+        this.children = children;
+        this.rooms = rooms;
         this.status = BookingStatus.CONFIRMED;
         this.createdAt = createdAt;
     }
@@ -82,7 +97,14 @@ public class Booking {
     public LocalDate getCheckIn() { return checkIn; }
     public LocalDate getCheckOut() { return checkOut; }
     public int getNights() { return nights; }
+    public BigDecimal getSubtotalAmount() { return subtotalAmount; }
+    public BigDecimal getGstRate() { return gstRate; }
+    public BigDecimal getGstAmount() { return gstAmount; }
     public BigDecimal getTotalAmount() { return totalAmount; }
+    public String getRoomType() { return roomType; }
+    public int getAdults() { return adults; }
+    public int getChildren() { return children; }
+    public int getRooms() { return rooms; }
     public BookingStatus getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getCancelledAt() { return cancelledAt; }

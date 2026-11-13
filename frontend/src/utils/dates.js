@@ -32,13 +32,6 @@ export function addDays(iso, days) {
   return toIsoDate(new Date(year, month - 1, day + days));
 }
 
-export function isFreeCancellationClosed(checkIn) {
-  const { year, month, day } = parseIso(checkIn);
-  const cancellationDeadline = new Date(year, month - 1, day);
-  cancellationDeadline.setHours(cancellationDeadline.getHours() - 48);
-  return new Date() > cancellationDeadline;
-}
-
 // Same rules and messages as the backend StayValidator. Returns '' when valid.
 // ISO dates (yyyy-mm-dd) sort correctly as plain strings, so < and > compare dates.
 export function validateStay(checkIn, checkOut) {

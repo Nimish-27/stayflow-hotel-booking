@@ -19,7 +19,7 @@ export default function ConfirmationPage() {
       <h1>Booking confirmed</h1>
       <p>
         Keep your reference and the email you used. You need both to view or cancel the booking.
-        Free cancellation is available until 48 hours before check-in.
+        Cancellation terms are shown below. Bookings made within 48 hours of check-in have a short grace period.
       </p>
       <BookingDetails booking={booking} />
       <div className="actions">

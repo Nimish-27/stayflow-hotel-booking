@@ -5,7 +5,7 @@ import static com.hotelbooking.service.TestFixtures.HOTEL_ID;
 import static com.hotelbooking.service.TestFixtures.RULES;
 import static com.hotelbooking.service.TestFixtures.TODAY;
 import static com.hotelbooking.service.TestFixtures.hotel;
-import static com.hotelbooking.service.TestFixtures.inventory;
+import static com.hotelbooking.service.TestFixtures.typeInventory;
 import static com.hotelbooking.service.TestFixtures.isNightOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -18,7 +18,7 @@ import com.hotelbooking.dto.StayQuote;
 import com.hotelbooking.exception.HotelNotFoundException;
 import com.hotelbooking.exception.InvalidStayException;
 import com.hotelbooking.repository.HotelRepository;
-import com.hotelbooking.repository.RoomInventoryRepository;
+import com.hotelbooking.repository.RoomTypeInventoryRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -39,14 +39,14 @@ class AlternativeDatesServiceTest {
     @Mock
     private HotelRepository hotelRepository;
     @Mock
-    private RoomInventoryRepository inventoryRepository;
+    private RoomTypeInventoryRepository inventoryRepository;
 
     private AlternativeDatesService service;
 
     @BeforeEach
     void setUp() {
         service = new AlternativeDatesService(hotelRepository, inventoryRepository,
-                new StayValidator(RULES, CLOCK), new AvailabilityCalculator(), new PriceCalculator(),
+                new StayValidator(RULES, CLOCK), new AvailabilityCalculator(), new PriceCalculator(RULES),
                 RULES, CLOCK);
     }
 
@@ -95,7 +95,7 @@ class AlternativeDatesServiceTest {
         assertThat(alternatives).extracting(StayQuote::checkIn)
                 .containsExactly(checkIn.minusDays(1), checkIn.plusDays(1), checkIn.minusDays(2));
         verify(inventoryRepository, times(1))
-                .findStay(HOTEL_ID, checkIn.minusDays(SHIFT), checkOut.plusDays(SHIFT));
+                .findStay(HOTEL_ID, "Standard Room", checkIn.minusDays(SHIFT), checkOut.plusDays(SHIFT));
     }
 
     @Test
@@ -154,6 +154,7 @@ class AlternativeDatesServiceTest {
         LocalDate from = checkIn.minusDays(SHIFT);
         LocalDate to = checkIn.plusDays(nights).plusDays(SHIFT);
         when(hotelRepository.findById(HOTEL_ID)).thenReturn(Optional.of(hotel(TOTAL_ROOMS)));
-        when(inventoryRepository.findStay(HOTEL_ID, from, to)).thenReturn(inventory(from, to, bookedOn));
+        when(inventoryRepository.findStay(HOTEL_ID, "Standard Room", from, to))
+                .thenReturn(typeInventory(from, to, bookedOn));
     }
 }

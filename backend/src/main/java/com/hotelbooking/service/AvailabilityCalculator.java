@@ -1,10 +1,7 @@
 package com.hotelbooking.service;
 
-import com.hotelbooking.entity.RoomInventory;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 /**
@@ -14,11 +11,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class AvailabilityCalculator {
-
-    public Map<LocalDate, Integer> bookedByNight(List<RoomInventory> rows) {
-        return rows.stream()
-                .collect(Collectors.toMap(RoomInventory::getStayDate, RoomInventory::getBookedRooms));
-    }
 
     public int roomsAvailable(int totalRooms, Map<LocalDate, Integer> bookedByNight,
                               LocalDate checkIn, LocalDate checkOut) {
@@ -36,5 +28,10 @@ public class AvailabilityCalculator {
     public boolean isAvailable(int totalRooms, Map<LocalDate, Integer> bookedByNight,
                                LocalDate checkIn, LocalDate checkOut) {
         return roomsAvailable(totalRooms, bookedByNight, checkIn, checkOut) > 0;
+    }
+
+    public boolean isAvailable(int totalRooms, Map<LocalDate, Integer> bookedByNight,
+                               LocalDate checkIn, LocalDate checkOut, int requestedRooms) {
+        return roomsAvailable(totalRooms, bookedByNight, checkIn, checkOut) >= requestedRooms;
     }
 }

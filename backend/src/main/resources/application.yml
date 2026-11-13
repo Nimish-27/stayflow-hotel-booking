@@ -14,7 +14,7 @@ spring:
         jdbc:
           time_zone: UTC      # created_at / cancelled_at are stored in UTC
   flyway:
-    locations: ${FLYWAY_LOCATIONS:classpath:db/migration,classpath:db/sample-data}
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration}
   mvc:
     format:
       date: iso               # LocalDate request params use yyyy-MM-dd
@@ -30,3 +30,5 @@ app:
     alternative-shift-days: 7
     max-alternatives: 3
     free-cancellation-hours: 48
+    cancellation-grace-hours: 2
+    gst-rate: 0.18

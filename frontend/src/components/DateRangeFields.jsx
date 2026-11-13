@@ -34,7 +34,7 @@ export default function DateRangeFields({ checkIn, checkOut, onChange, idPrefix,
             availability={availability}
             loading={availabilityLoading}
             min={today}
-            max={lastCheckOut}
+            max={addDays(lastCheckOut, -1)}
             label="Check-in"
             id="booking-check-in"
             placeholder="Select a check-in date"
@@ -48,6 +48,7 @@ export default function DateRangeFields({ checkIn, checkOut, onChange, idPrefix,
             loading={availabilityLoading}
             min={addDays(checkIn || today, 1)}
             max={maxCheckOut}
+            disableSoldOut={false}
             label="Check-out"
             id="booking-check-out"
             placeholder="Select a check-out date"

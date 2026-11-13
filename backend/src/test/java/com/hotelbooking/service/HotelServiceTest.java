@@ -5,7 +5,7 @@ import static com.hotelbooking.service.TestFixtures.HOTEL_ID;
 import static com.hotelbooking.service.TestFixtures.RULES;
 import static com.hotelbooking.service.TestFixtures.TODAY;
 import static com.hotelbooking.service.TestFixtures.hotel;
-import static com.hotelbooking.service.TestFixtures.inventory;
+import static com.hotelbooking.service.TestFixtures.typeInventory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
@@ -17,7 +17,7 @@ import com.hotelbooking.exception.HotelNotFoundException;
 import com.hotelbooking.exception.InvalidStayException;
 import com.hotelbooking.mapper.HotelMapper;
 import com.hotelbooking.repository.HotelRepository;
-import com.hotelbooking.repository.RoomInventoryRepository;
+import com.hotelbooking.repository.RoomTypeInventoryRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class HotelServiceTest {
@@ -36,14 +37,14 @@ class HotelServiceTest {
     @Mock
     private HotelRepository hotelRepository;
     @Mock
-    private RoomInventoryRepository inventoryRepository;
+    private RoomTypeInventoryRepository inventoryRepository;
 
     private HotelService service;
 
     @BeforeEach
     void setUp() {
         service = new HotelService(hotelRepository, inventoryRepository, new StayValidator(RULES, CLOCK),
-                new AvailabilityCalculator(), new PriceCalculator(), new HotelMapper());
+                new AvailabilityCalculator(), new PriceCalculator(RULES), new HotelMapper());
     }
 
     @Test
@@ -78,8 +79,8 @@ class HotelServiceTest {
     @Test
     void listWithDatesShowsRoomsAvailableAndTotal() {
         when(hotelRepository.findAllByOrderByNameAsc()).thenReturn(List.of(hotel(3)));
-        when(inventoryRepository.findAllHotelsStay(CHECK_IN, CHECK_OUT))
-                .thenReturn(inventory(CHECK_IN, CHECK_OUT, 1));
+        when(inventoryRepository.findAllStay(CHECK_IN, CHECK_OUT))
+                .thenReturn(typeInventory(CHECK_IN, CHECK_OUT, 1));
 
         HotelResponse response = service.searchHotels(null, CHECK_IN, CHECK_OUT).get(0);
 
@@ -91,8 +92,8 @@ class HotelServiceTest {
     @Test
     void soldOutHotelIsStillListedWithZeroRooms() {
         when(hotelRepository.findAllByOrderByNameAsc()).thenReturn(List.of(hotel(3)));
-        when(inventoryRepository.findAllHotelsStay(CHECK_IN, CHECK_OUT))
-                .thenReturn(inventory(CHECK_IN, CHECK_OUT, 3));
+        when(inventoryRepository.findAllStay(CHECK_IN, CHECK_OUT))
+                .thenReturn(typeInventory(CHECK_IN, CHECK_OUT, 3));
 
         assertThat(service.searchHotels(null, CHECK_IN, CHECK_OUT).get(0).quote().roomsAvailable()).isZero();
     }
@@ -107,8 +108,8 @@ class HotelServiceTest {
     @Test
     void detailsWithDatesIncludeTheQuote() {
         when(hotelRepository.findById(HOTEL_ID)).thenReturn(Optional.of(hotel(3)));
-        when(inventoryRepository.findStay(HOTEL_ID, CHECK_IN, CHECK_OUT))
-                .thenReturn(inventory(CHECK_IN, CHECK_OUT, 2));
+        when(inventoryRepository.findStay(HOTEL_ID, "Standard Room", CHECK_IN, CHECK_OUT))
+                .thenReturn(typeInventory(CHECK_IN, CHECK_OUT, 2));
 
         HotelResponse response = service.getHotel(HOTEL_ID, CHECK_IN, CHECK_OUT);
 
@@ -120,5 +121,25 @@ class HotelServiceTest {
         when(hotelRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getHotel(99L, null, null)).isInstanceOf(HotelNotFoundException.class);
+    }
+
+    @Test
+    void unknownRoomTypeIsRejectedInsteadOfUsingTheDefaultPrice() {
+        var testHotel = hotel(3);
+        ReflectionTestUtils.setField(testHotel, "roomTypePrices", "Standard Room=3000,Deluxe=4500");
+        when(hotelRepository.findById(HOTEL_ID)).thenReturn(Optional.of(testHotel));
+
+        assertThatThrownBy(() -> service.getHotel(HOTEL_ID, null, null, "Penthouse"))
+                .isInstanceOf(InvalidStayException.class);
+    }
+
+    @Test
+    void malformedRoomCountIsRejected() {
+        var testHotel = hotel(3);
+        ReflectionTestUtils.setField(testHotel, "roomTypeCounts", "Standard Room=not-a-number");
+        when(hotelRepository.findById(HOTEL_ID)).thenReturn(Optional.of(testHotel));
+
+        assertThatThrownBy(() -> service.getHotel(HOTEL_ID, null, null))
+                .isInstanceOf(InvalidStayException.class);
     }
 }

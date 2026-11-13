@@ -2,7 +2,7 @@ package com.hotelbooking.service;
 
 import com.hotelbooking.config.BookingRules;
 import com.hotelbooking.entity.Hotel;
-import com.hotelbooking.entity.RoomInventory;
+import com.hotelbooking.entity.RoomTypeInventory;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -18,8 +18,10 @@ final class TestFixtures {
     static final ZoneId ZONE = ZoneId.of("Asia/Kolkata");
     static final Clock CLOCK = Clock.fixed(Instant.parse("2025-06-10T06:00:00Z"), ZONE);
     static final LocalDate TODAY = LocalDate.of(2025, 6, 10);
-    static final BookingRules RULES = new BookingRules(30, 365, 372, 7, 3, 48);
+    static final BookingRules RULES = new BookingRules(30, 365, 372, 7, 3, 48, 2,
+            new BigDecimal("0.18"));
     static final Long HOTEL_ID = 1L;
+    static final LocalDate CHECK_IN = TODAY.plusDays(10);
 
     private TestFixtures() {
     }
@@ -32,15 +34,16 @@ final class TestFixtures {
         return hotel;
     }
 
-    /** One inventory row per night in [from, toExclusive). */
-    static List<RoomInventory> inventory(LocalDate from, LocalDate toExclusive, Function<LocalDate, Integer> bookedOn) {
-        return from.datesUntil(toExclusive)
-                .map(night -> new RoomInventory(HOTEL_ID, night, bookedOn.apply(night)))
-                .toList();
+    static List<RoomTypeInventory> typeInventory(LocalDate from, LocalDate toExclusive, int booked) {
+        return typeInventory(from, toExclusive, night -> booked);
     }
 
-    static List<RoomInventory> inventory(LocalDate from, LocalDate toExclusive, int booked) {
-        return inventory(from, toExclusive, night -> booked);
+    static List<RoomTypeInventory> typeInventory(LocalDate from, LocalDate toExclusive,
+                                                  Function<LocalDate, Integer> bookedOn) {
+        return from.datesUntil(toExclusive)
+                .map(night -> new RoomTypeInventory(HOTEL_ID, "Standard Room", night,
+                        bookedOn.apply(night)))
+                .toList();
     }
 
     /** True if the night belongs to the stay [checkIn, checkOut). */

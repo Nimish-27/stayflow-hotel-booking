@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 
 class PriceCalculatorTest {
 
-    private final PriceCalculator calculator = new PriceCalculator();
+    private final PriceCalculator calculator = new PriceCalculator(TestFixtures.RULES);
 
     @Test
     void nightsIsCheckOutMinusCheckIn() {

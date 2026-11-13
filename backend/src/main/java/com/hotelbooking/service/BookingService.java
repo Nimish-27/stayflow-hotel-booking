@@ -2,22 +2,21 @@ package com.hotelbooking.service;
 
 import com.hotelbooking.dto.BookingResponse;
 import com.hotelbooking.dto.CreateBookingRequest;
-import com.hotelbooking.config.BookingRules;
 import com.hotelbooking.entity.Booking;
 import com.hotelbooking.entity.Hotel;
-import com.hotelbooking.entity.RoomInventory;
+import com.hotelbooking.entity.RoomTypeInventory;
 import com.hotelbooking.exception.BookingNotFoundException;
 import com.hotelbooking.exception.CancellationNotAllowedException;
 import com.hotelbooking.exception.HotelNotFoundException;
+import com.hotelbooking.exception.InvalidStayException;
 import com.hotelbooking.exception.SoldOutException;
 import com.hotelbooking.mapper.BookingMapper;
 import com.hotelbooking.repository.BookingRepository;
 import com.hotelbooking.repository.HotelRepository;
-import com.hotelbooking.repository.RoomInventoryRepository;
+import com.hotelbooking.repository.RoomTypeInventoryRepository;
 import com.hotelbooking.util.InputNormalizer;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,30 +37,28 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final HotelRepository hotelRepository;
-    private final RoomInventoryRepository inventoryRepository;
+    private final RoomTypeInventoryRepository roomTypeInventoryRepository;
     private final StayValidator stayValidator;
     private final PriceCalculator priceCalculator;
-    private final AvailabilityCalculator availabilityCalculator;
     private final BookingReferenceGenerator referenceGenerator;
     private final BookingMapper bookingMapper;
     private final Clock clock;
-    private final BookingRules bookingRules;
+    private final CancellationPolicy cancellationPolicy;
 
     public BookingService(BookingRepository bookingRepository, HotelRepository hotelRepository,
-                          RoomInventoryRepository inventoryRepository, StayValidator stayValidator,
-                          PriceCalculator priceCalculator, AvailabilityCalculator availabilityCalculator,
+                          RoomTypeInventoryRepository roomTypeInventoryRepository, StayValidator stayValidator,
+                          PriceCalculator priceCalculator,
                           BookingReferenceGenerator referenceGenerator, BookingMapper bookingMapper,
-                          Clock clock, BookingRules bookingRules) {
+                          Clock clock, CancellationPolicy cancellationPolicy) {
         this.bookingRepository = bookingRepository;
         this.hotelRepository = hotelRepository;
-        this.inventoryRepository = inventoryRepository;
+        this.roomTypeInventoryRepository = roomTypeInventoryRepository;
         this.stayValidator = stayValidator;
         this.priceCalculator = priceCalculator;
-        this.availabilityCalculator = availabilityCalculator;
         this.referenceGenerator = referenceGenerator;
         this.bookingMapper = bookingMapper;
         this.clock = clock;
-        this.bookingRules = bookingRules;
+        this.cancellationPolicy = cancellationPolicy;
     }
 
     /** One transaction: lock the nights, check every night, increment every night, insert the booking. */
@@ -70,18 +67,32 @@ public class BookingService {
         stayValidator.validate(request.checkIn(), request.checkOut());
         Hotel hotel = hotelRepository.findById(request.hotelId())
                 .orElseThrow(() -> new HotelNotFoundException(request.hotelId()));
+        String roomType = hotel.resolveRoomType(request.roomType());
+        int rooms = request.rooms();
+        int guests = request.adults() + request.children();
+        if (request.adults() < 1 || request.children() < 0 || rooms < 1
+                || guests > hotel.maxOccupancyForRoomType(roomType) * rooms) {
+            throw new InvalidStayException("The selected room type cannot accommodate this occupancy");
+        }
         int nights = priceCalculator.nights(request.checkIn(), request.checkOut());
 
-        List<RoomInventory> lockedNights = inventoryRepository
-                .findStayForUpdate(request.hotelId(), request.checkIn(), request.checkOut());
-        requireOneRowPerNight(lockedNights, nights, request.hotelId());
-        requireFreeRoomOnEveryNight(hotel, lockedNights, request);
+        var roomPrice = hotel.priceForRoomType(roomType);
+        List<RoomTypeInventory> lockedNights = roomTypeInventoryRepository.findStayForUpdate(
+                request.hotelId(), roomType, request.checkIn(), request.checkOut());
+        requireOneTypeRowPerNight(lockedNights, nights, request.hotelId(), roomType);
+        requireFreeRoomOnEveryNight(hotel, lockedNights, roomType, rooms);
+        lockedNights.forEach(row -> row.increment(rooms));
 
-        lockedNights.forEach(RoomInventory::increment);
-
+        var subtotal = priceCalculator.subtotal(roomPrice, nights)
+                .multiply(java.math.BigDecimal.valueOf(rooms))
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+        var gstRate = priceCalculator.gstRate();
+        var gstAmount = priceCalculator.gst(subtotal);
+        var total = subtotal.add(gstAmount).setScale(2, java.math.RoundingMode.HALF_UP);
         Booking booking = new Booking(generateUniqueReference(), hotel, request.guestName(),
                 request.guestEmail(), request.checkIn(), request.checkOut(), nights,
-                priceCalculator.total(hotel.getPricePerNight(), nights), Instant.now(clock));
+                subtotal, gstRate, gstAmount, total,
+                Instant.now(clock), roomType, request.adults(), request.children(), rooms);
         bookingRepository.save(booking);
 
         log.info("Booking created: reference={} hotelId={} nights={}",
@@ -112,46 +123,31 @@ public class BookingService {
             log.info("Booking {} was already cancelled, nothing to release", booking.getReference());
             return bookingMapper.toResponse(booking);
         }
-        ZonedDateTime cancellationDeadline = booking.getCheckIn()
-                .atStartOfDay(clock.getZone())
-                .minusHours(bookingRules.freeCancellationHours());
-        if (Instant.now(clock).isAfter(cancellationDeadline.toInstant())) {
+        if (!cancellationPolicy.isCancellable(booking, Instant.now(clock))) {
             throw new CancellationNotAllowedException(
-                    "Free cancellation is available until "
-                            + bookingRules.freeCancellationHours()
-                            + " hours before check-in");
+                    "Cancellation is not allowed after the cancellation deadline");
         }
 
         Long hotelId = booking.getHotel().getId();
-        List<RoomInventory> lockedNights =
-                inventoryRepository.findStayForUpdate(hotelId, booking.getCheckIn(), booking.getCheckOut());
-        requireOneRowPerNight(lockedNights, booking.getNights(), hotelId);
-
-        lockedNights.forEach(RoomInventory::decrement);
+        List<RoomTypeInventory> lockedNights = roomTypeInventoryRepository.findStayForUpdate(
+                hotelId, booking.getRoomType(), booking.getCheckIn(), booking.getCheckOut());
+        requireOneTypeRowPerNight(lockedNights, booking.getNights(), hotelId, booking.getRoomType());
+        lockedNights.forEach(row -> row.decrement(booking.getRooms()));
         booking.cancel(Instant.now(clock));
 
         log.info("Booking cancelled: reference={} hotelId={}", booking.getReference(), hotelId);
         return bookingMapper.toResponse(booking);
     }
 
-    /** Safety net: validation should make this impossible, so fail loudly instead of booking silently. */
-    private void requireOneRowPerNight(List<RoomInventory> rows, int nights, Long hotelId) {
-        if (rows.size() != nights) {
-            log.error("Inventory rows missing: hotelId={} expectedNights={} foundRows={}",
-                    hotelId, nights, rows.size());
-            throw new IllegalStateException("Inventory is missing for some nights of hotel " + hotelId);
+    private void requireFreeRoomOnEveryNight(Hotel hotel, List<RoomTypeInventory> rows, String roomType, int rooms) {
+        int capacity = hotel.roomsForRoomType(roomType);
+        for (RoomTypeInventory row : rows) {
+            if (row.getBookedRooms() + rooms > capacity) throw new SoldOutException("No room is available for all nights of the selected stay");
         }
     }
 
-    private void requireFreeRoomOnEveryNight(Hotel hotel, List<RoomInventory> lockedNights,
-                                             CreateBookingRequest request) {
-        boolean available = availabilityCalculator.isAvailable(hotel.getTotalRooms(),
-                availabilityCalculator.bookedByNight(lockedNights), request.checkIn(), request.checkOut());
-        if (!available) {
-            log.info("Sold out: hotelId={} checkIn={} checkOut={}",
-                    request.hotelId(), request.checkIn(), request.checkOut());
-            throw new SoldOutException("No room is available for all nights of the selected stay");
-        }
+    private void requireOneTypeRowPerNight(List<RoomTypeInventory> rows, int nights, Long hotelId, String roomType) {
+        if (rows.size() != nights) throw new IllegalStateException("Inventory is missing for room type " + roomType + " at hotel " + hotelId);
     }
 
     /** A collision is practically impossible; the UNIQUE constraint remains the final guard. */

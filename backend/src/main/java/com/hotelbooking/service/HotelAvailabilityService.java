@@ -2,10 +2,10 @@ package com.hotelbooking.service;
 
 import com.hotelbooking.dto.AvailabilityDay;
 import com.hotelbooking.entity.Hotel;
-import com.hotelbooking.entity.RoomInventory;
 import com.hotelbooking.exception.HotelNotFoundException;
 import com.hotelbooking.repository.HotelRepository;
-import com.hotelbooking.repository.RoomInventoryRepository;
+import com.hotelbooking.repository.RoomTypeInventoryRepository;
+import com.hotelbooking.exception.InvalidStayException;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -14,27 +14,37 @@ import org.springframework.stereotype.Service;
 public class HotelAvailabilityService {
 
     private final HotelRepository hotelRepository;
-    private final RoomInventoryRepository inventoryRepository;
+    private final RoomTypeInventoryRepository roomTypeInventoryRepository;
 
     public HotelAvailabilityService(HotelRepository hotelRepository,
-                                    RoomInventoryRepository inventoryRepository) {
+                                    RoomTypeInventoryRepository roomTypeInventoryRepository) {
         this.hotelRepository = hotelRepository;
-        this.inventoryRepository = inventoryRepository;
+        this.roomTypeInventoryRepository = roomTypeInventoryRepository;
     }
 
     public List<AvailabilityDay> getAvailability(Long hotelId, LocalDate from, LocalDate to) {
+        return getAvailability(hotelId, from, to, null, 1);
+    }
+
+    public List<AvailabilityDay> getAvailability(Long hotelId, LocalDate from, LocalDate to,
+                                                  String roomType, int rooms) {
+        if (from == null || to == null || !to.isAfter(from) || rooms < 1) {
+            throw new InvalidStayException("Availability requires a valid date range and at least one room");
+        }
         Hotel hotel = hotelRepository.findById(hotelId)
                 .orElseThrow(() -> new HotelNotFoundException(hotelId));
-        return inventoryRepository.findStay(hotelId, from, to).stream()
-                .map(row -> toDay(hotel, row))
+        String resolved = hotel.resolveRoomType(roomType);
+        int capacity = hotel.roomsForRoomType(resolved);
+        return roomTypeInventoryRepository.findStay(hotelId, resolved, from, to).stream()
+                .map(row -> toDay(capacity, row.getBookedRooms(), row.getStayDate(), rooms))
                 .toList();
     }
 
-    private AvailabilityDay toDay(Hotel hotel, RoomInventory row) {
-        int roomsAvailable = hotel.getTotalRooms() - row.getBookedRooms();
-        int limitedThreshold = Math.max(1, (int) Math.ceil(hotel.getTotalRooms() * 0.25));
+    private AvailabilityDay toDay(int capacity, int bookedRooms, LocalDate date, int rooms) {
+        int roomsAvailable = Math.max(0, capacity - bookedRooms);
+        int limitedThreshold = Math.max(rooms, (int) Math.ceil(capacity * 0.25));
         String level = roomsAvailable == 0 ? "sold-out"
                 : roomsAvailable <= limitedThreshold ? "limited" : "available";
-        return new AvailabilityDay(row.getStayDate(), roomsAvailable, level);
+        return new AvailabilityDay(date, roomsAvailable, level);
     }
 }

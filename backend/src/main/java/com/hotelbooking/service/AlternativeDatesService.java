@@ -3,9 +3,10 @@ package com.hotelbooking.service;
 import com.hotelbooking.config.BookingRules;
 import com.hotelbooking.dto.StayQuote;
 import com.hotelbooking.entity.Hotel;
+import com.hotelbooking.entity.RoomTypeInventory;
 import com.hotelbooking.exception.HotelNotFoundException;
 import com.hotelbooking.repository.HotelRepository;
-import com.hotelbooking.repository.RoomInventoryRepository;
+import com.hotelbooking.repository.RoomTypeInventoryRepository;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -23,14 +24,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class AlternativeDatesService {
 
     private final HotelRepository hotelRepository;
-    private final RoomInventoryRepository inventoryRepository;
+    private final RoomTypeInventoryRepository inventoryRepository;
     private final StayValidator stayValidator;
     private final AvailabilityCalculator availabilityCalculator;
     private final PriceCalculator priceCalculator;
     private final BookingRules rules;
-    private final Clock clock;
 
-    public AlternativeDatesService(HotelRepository hotelRepository, RoomInventoryRepository inventoryRepository,
+    public AlternativeDatesService(HotelRepository hotelRepository, RoomTypeInventoryRepository inventoryRepository,
                                    StayValidator stayValidator, AvailabilityCalculator availabilityCalculator,
                                    PriceCalculator priceCalculator, BookingRules rules, Clock clock) {
         this.hotelRepository = hotelRepository;
@@ -39,7 +39,6 @@ public class AlternativeDatesService {
         this.availabilityCalculator = availabilityCalculator;
         this.priceCalculator = priceCalculator;
         this.rules = rules;
-        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -51,8 +50,11 @@ public class AlternativeDatesService {
         int nights = priceCalculator.nights(checkIn, checkOut);
         int shift = rules.alternativeShiftDays();
         // ONE query covers every candidate stay; each candidate is then checked in memory.
-        Map<LocalDate, Integer> booked = availabilityCalculator.bookedByNight(
-                inventoryRepository.findStay(hotelId, checkIn.minusDays(shift), checkOut.plusDays(shift)));
+        String roomType = hotel.resolveRoomType(null);
+        Map<LocalDate, Integer> booked = inventoryRepository.findStay(
+                hotelId, roomType, checkIn.minusDays(shift), checkOut.plusDays(shift)).stream()
+                .collect(java.util.stream.Collectors.toMap(RoomTypeInventory::getStayDate,
+                        RoomTypeInventory::getBookedRooms));
 
         return candidateOffsets().stream()
                 .map(offset -> checkIn.plusDays(offset))
@@ -78,10 +80,12 @@ public class AlternativeDatesService {
         if (!stayValidator.isInsideBookingWindow(start, end)) {
             return Optional.empty();
         }
-        int roomsAvailable = availabilityCalculator.roomsAvailable(hotel.getTotalRooms(), booked, start, end);
+        int roomsAvailable = availabilityCalculator.roomsAvailable(
+                hotel.roomsForRoomType(hotel.resolveRoomType(null)), booked, start, end);
         if (roomsAvailable == 0) {
             return Optional.empty();
         }
-        return Optional.of(priceCalculator.quote(hotel.getPricePerNight(), start, end, roomsAvailable));
+        String roomType = hotel.resolveRoomType(null);
+        return Optional.of(priceCalculator.quote(hotel.priceForRoomType(roomType), start, end, roomsAvailable));
     }
 }

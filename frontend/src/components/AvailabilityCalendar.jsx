@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { addDays, todayIso } from '../utils/dates';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -20,6 +19,7 @@ function toIso(date) {
 
 export default function AvailabilityCalendar({
   value, availability, loading, min, max, onChange, label, id, placeholder, open, onToggle,
+  disableSoldOut = true,
 }) {
   const initial = value ? parseDate(value) : parseDate(min);
   const [month, setMonth] = useState(new Date(initial.getFullYear(), initial.getMonth(), 1));
@@ -52,7 +52,7 @@ export default function AvailabilityCalendar({
             if (!day) return <span key={`empty-${index}`} />;
             const date = toIso(new Date(month.getFullYear(), month.getMonth(), day));
             const item = byDate.get(date);
-            const disabled = date < min || date >= max || item?.level === 'sold-out';
+            const disabled = date < min || date > max || (disableSoldOut && item?.level === 'sold-out');
             return (
               <button
                 type="button"

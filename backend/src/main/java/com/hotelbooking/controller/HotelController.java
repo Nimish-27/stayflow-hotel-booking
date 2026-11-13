@@ -36,24 +36,29 @@ public class HotelController {
     public List<AvailabilityDay> getAvailability(
             @PathVariable Long id,
             @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate to) {
-        return hotelAvailabilityService.getAvailability(id, from, to);
+            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate to,
+            @RequestParam(required = false) String roomType,
+            @RequestParam(defaultValue = "1") int rooms) {
+        return hotelAvailabilityService.getAvailability(id, from, to, roomType, rooms);
     }
 
     @GetMapping
     public List<HotelResponse> searchHotels(
             @RequestParam(required = false) String location,
             @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate checkIn,
-            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate checkOut) {
-        return hotelService.searchHotels(location, checkIn, checkOut);
+            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate checkOut,
+            @RequestParam(required = false) String roomType) {
+        return hotelService.searchHotels(location, checkIn, checkOut, roomType);
     }
 
     @GetMapping("/{id}")
     public HotelResponse getHotel(
             @PathVariable Long id,
             @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate checkIn,
-            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate checkOut) {
-        return hotelService.getHotel(id, checkIn, checkOut);
+            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate checkOut,
+            @RequestParam(required = false) String roomType,
+            @RequestParam(defaultValue = "1") int rooms) {
+        return hotelService.getHotel(id, checkIn, checkOut, roomType, rooms);
     }
 
     @GetMapping("/{id}/alternatives")

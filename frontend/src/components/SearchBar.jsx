@@ -1,15 +1,20 @@
 import { useState } from 'react';
 import { validateSearchDates } from '../utils/dates';
 import DateRangeFields from './DateRangeFields.jsx';
+import OccupancySelector from './OccupancySelector.jsx';
 import TextField from './TextField.jsx';
 
 const HOTEL_LOCATIONS = ['Goa', 'Jaipur', 'Mumbai', 'Bengaluru', 'Manali', 'Kochi'];
-
 export default function SearchBar({ initialValues = {}, onSearch }) {
   const [location, setLocation] = useState(initialValues.location ?? '');
   const [dates, setDates] = useState({
     checkIn: initialValues.checkIn ?? '',
     checkOut: initialValues.checkOut ?? '',
+  });
+  const [occupancy, setOccupancy] = useState({
+    adults: initialValues.adults ?? 2,
+    children: initialValues.children ?? 0,
+    rooms: initialValues.rooms ?? 1,
   });
   const [dateError, setDateError] = useState('');
 
@@ -23,7 +28,7 @@ export default function SearchBar({ initialValues = {}, onSearch }) {
     const message = validateSearchDates(dates.checkIn, dates.checkOut);
     setDateError(message);
     if (!message) {
-      onSearch({ location: location.trim(), ...dates });
+      onSearch({ location: location.trim(), ...dates, ...occupancy });
     }
   }
 
@@ -47,6 +52,7 @@ export default function SearchBar({ initialValues = {}, onSearch }) {
           checkOut={dates.checkOut}
           onChange={handleDatesChange}
         />
+        <OccupancySelector value={occupancy} onChange={setOccupancy} />
         <button type="submit" className="button">Search</button>
       </div>
       {dateError && <p className="field-error" role="alert">{dateError}</p>}

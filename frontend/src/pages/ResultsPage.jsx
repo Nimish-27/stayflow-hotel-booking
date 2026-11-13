@@ -15,6 +15,9 @@ export default function ResultsPage() {
   const location = searchParams.get('location') ?? '';
   const checkIn = searchParams.get('checkIn') ?? '';
   const checkOut = searchParams.get('checkOut') ?? '';
+  const adults = searchParams.get('adults') ?? '2';
+  const children = searchParams.get('children') ?? '0';
+  const rooms = searchParams.get('rooms') ?? '1';
 
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,7 +100,7 @@ export default function ResultsPage() {
     <section>
       <SearchBar
         key={searchParams.toString()}
-        initialValues={{ location, checkIn, checkOut }}
+        initialValues={{ location, checkIn, checkOut, adults, children, rooms }}
         onSearch={handleSearch}
       />
 
@@ -174,7 +177,13 @@ export default function ResultsPage() {
         <p className="empty-state">No stays match these filters. Try clearing one or more filters.</p>
       )}
       <div className="hotel-grid">
-        {!loading && !error && filteredHotels.map((hotel) => <HotelCard key={hotel.id} hotel={hotel} />)}
+        {!loading && !error && filteredHotels.map((hotel) => (
+          <HotelCard
+            key={hotel.id}
+            hotel={hotel}
+            occupancy={{ adults, children, rooms }}
+          />
+        ))}
       </div>
     </section>
   );

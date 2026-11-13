@@ -51,9 +51,9 @@ abstract class AbstractIntegrationTest {
                 .contains("hotel_booking_test");
 
         jdbc.update("DELETE FROM bookings");
-        jdbc.update("DELETE FROM room_inventory WHERE hotel_id IN (SELECT id FROM hotels WHERE name LIKE 'IT %')");
+        jdbc.update(
+                "DELETE FROM room_type_inventory WHERE hotel_id IN (SELECT id FROM hotels WHERE name LIKE 'IT %')");
         jdbc.update("DELETE FROM hotels WHERE name LIKE 'IT %'");
-        jdbc.update("UPDATE room_inventory SET booked_rooms = 0");
 
         testHotelId = hotelRepository.save(new Hotel("IT Last Room Hotel", "Testville",
                 "Single-room hotel used by integration tests", "WiFi", TEST_HOTEL_PRICE, 1)).getId();
@@ -70,7 +70,8 @@ abstract class AbstractIntegrationTest {
 
     protected int bookedRooms(LocalDate night) {
         return jdbc.queryForObject(
-                "SELECT booked_rooms FROM room_inventory WHERE hotel_id = ? AND stay_date = ?",
+                "SELECT booked_rooms FROM room_type_inventory "
+                        + "WHERE hotel_id = ? AND room_type = 'Standard Room' AND stay_date = ?",
                 Integer.class, testHotelId, Date.valueOf(night));
     }
 

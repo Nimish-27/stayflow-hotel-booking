@@ -8,7 +8,7 @@ CREATE DATABASE IF NOT EXISTS hotel_booking
 CREATE DATABASE IF NOT EXISTS hotel_booking_test
     CHARACTER SET utf8mb4;
 
-CREATE USER IF NOT EXISTS 'hotel_app'@'localhost' IDENTIFIED BY 'password';
+CREATE USER IF NOT EXISTS 'hotel_app'@'localhost' IDENTIFIED BY 'CHANGE_ME';
 
 GRANT ALL PRIVILEGES ON hotel_booking.*      TO 'hotel_app'@'localhost';
 GRANT ALL PRIVILEGES ON hotel_booking_test.* TO 'hotel_app'@'localhost';

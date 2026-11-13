@@ -21,7 +21,7 @@ export default function PriceSummary({ pricePerNight, quote, loading, hasDates }
           <dd>{formatMoney(quote.subtotal)}</dd>
         </div>
         <div className="row">
-          <dt>GST (18%)</dt>
+          <dt>GST ({Math.round((quote.gstRate ?? 0.18) * 100)}%)</dt>
           <dd>{formatMoney(quote.gstAmount)}</dd>
         </div>
         <div className="row total">

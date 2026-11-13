@@ -29,10 +29,27 @@ public record CreateBookingRequest(
         LocalDate checkIn,
 
         @NotNull(message = "Check-out date is required")
-        LocalDate checkOut) {
+        LocalDate checkOut,
+        String roomType,
+        Integer adults,
+        Integer children,
+        Integer rooms) {
+
+    public CreateBookingRequest(String guestName, String guestEmail, Long hotelId,
+                                LocalDate checkIn, LocalDate checkOut) {
+        this(guestName, guestEmail, hotelId, checkIn, checkOut, null, 2, 0, 1);
+    }
+
+    public CreateBookingRequest(String guestName, String guestEmail, Long hotelId,
+                                LocalDate checkIn, LocalDate checkOut, String roomType) {
+        this(guestName, guestEmail, hotelId, checkIn, checkOut, roomType, 2, 0, 1);
+    }
 
     public CreateBookingRequest {
         guestName = InputNormalizer.trim(guestName);
         guestEmail = InputNormalizer.email(guestEmail);
+        adults = adults == null ? 2 : adults;
+        children = children == null ? 0 : children;
+        rooms = rooms == null ? 1 : rooms;
     }
 }

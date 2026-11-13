@@ -3,7 +3,6 @@ package com.hotelbooking.service;
 import static com.hotelbooking.service.TestFixtures.HOTEL_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.hotelbooking.entity.RoomInventory;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -63,11 +62,4 @@ class AvailabilityCalculatorTest {
         assertThat(calculator.roomsAvailable(3, booked, D10, D13)).isZero();
     }
 
-    @Test
-    void bookedByNightMapsInventoryRowsByDate() {
-        List<RoomInventory> rows = List.of(
-                new RoomInventory(HOTEL_ID, D10, 2), new RoomInventory(HOTEL_ID, D11, 0));
-
-        assertThat(calculator.bookedByNight(rows)).containsEntry(D10, 2).containsEntry(D11, 0).hasSize(2);
-    }
 }

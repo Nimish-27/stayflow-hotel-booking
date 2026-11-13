@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class BookingConcurrencyIntegrationTest extends AbstractIntegrationTest {
 
@@ -59,6 +60,28 @@ class BookingConcurrencyIntegrationTest extends AbstractIntegrationTest {
         }
     }
 
+    @Test
+    void independentRoomTypesCanBookConcurrently() throws Exception {
+            var hotel = hotelRepository.findById(testHotelId).orElseThrow();
+            ReflectionTestUtils.setField(hotel, "roomTypes", "Standard Room,Deluxe");
+            ReflectionTestUtils.setField(hotel, "roomTypePrices", "Standard Room=1000,Deluxe=1200");
+            ReflectionTestUtils.setField(hotel, "roomTypeCounts", "Standard Room=1,Deluxe=1");
+            ReflectionTestUtils.setField(hotel, "roomTypeDetails",
+                    "Standard Room|Double|Queen|Standard;Deluxe|Double|King|Deluxe");
+            hotelRepository.saveAndFlush(hotel);
+            inventorySeeder.seedMissingInventory();
+
+            LocalDate checkIn = today().plusDays(30);
+            LocalDate checkOut = checkIn.plusDays(2);
+            List<Outcome> outcomes = bookConcurrently(i -> new CreateBookingRequest(
+                    "guest" + i, "guest" + i + "@example.com", testHotelId, checkIn, checkOut,
+                    i % 2 == 0 ? "Standard Room" : "Deluxe", 2, 0, 1));
+
+            assertThat(count(outcomes, Outcome.BOOKED)).isEqualTo(2);
+            assertThat(roomTypeBooked("Standard Room", checkIn)).isEqualTo(1);
+            assertThat(roomTypeBooked("Deluxe", checkIn)).isEqualTo(1);
+    }
+
     /** Starts all threads at the same instant, so they really compete for the same rows. */
     private List<Outcome> bookConcurrently(IntFunction<CreateBookingRequest> requestForThread) throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(THREADS);
@@ -95,6 +118,13 @@ class BookingConcurrencyIntegrationTest extends AbstractIntegrationTest {
         } catch (SoldOutException e) {
             return Outcome.SOLD_OUT;
         }
+    }
+
+    private int roomTypeBooked(String roomType, LocalDate night) {
+            return jdbc.queryForObject(
+                    "SELECT booked_rooms FROM room_type_inventory "
+                            + "WHERE hotel_id = ? AND room_type = ? AND stay_date = ?",
+                    Integer.class, testHotelId, roomType, java.sql.Date.valueOf(night));
     }
 
     private long count(List<Outcome> outcomes, Outcome wanted) {

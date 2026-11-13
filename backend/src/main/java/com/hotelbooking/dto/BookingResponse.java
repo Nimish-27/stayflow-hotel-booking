@@ -15,8 +15,17 @@ public record BookingResponse(
         LocalDate checkIn,
         LocalDate checkOut,
         int nights,
+        BigDecimal subtotalAmount,
+        BigDecimal gstRate,
+        BigDecimal gstAmount,
         BigDecimal totalAmount,
+        String roomType,
+        int adults,
+        int children,
+        int rooms,
         BookingStatus status,
         Instant createdAt,
-        Instant cancelledAt) {
+        Instant cancelledAt,
+        boolean cancellable,
+        Instant cancellableUntil) {
 }

@@ -27,7 +27,8 @@ class InventorySeederIntegrationTest extends AbstractIntegrationTest {
     @Test
     void topUpAddsOnlyTheMissingLastNights() {
         Date firstRemoved = Date.valueOf(today().plusDays(rules.inventorySeedDays() - MISSING_DAYS));
-        jdbc.update("DELETE FROM room_inventory WHERE hotel_id = ? AND stay_date >= ?", testHotelId, firstRemoved);
+        jdbc.update("DELETE FROM room_type_inventory WHERE hotel_id = ? AND stay_date >= ?",
+                testHotelId, firstRemoved);
 
         assertThat(inventorySeeder.seedMissingInventory()).isEqualTo(MISSING_DAYS);
 
@@ -35,7 +36,7 @@ class InventorySeederIntegrationTest extends AbstractIntegrationTest {
     }
 
     private int seededNights() {
-        return jdbc.queryForObject("SELECT COUNT(*) FROM room_inventory WHERE hotel_id = ?",
+        return jdbc.queryForObject("SELECT COUNT(*) FROM room_type_inventory WHERE hotel_id = ?",
                 Integer.class, testHotelId);
     }
 }

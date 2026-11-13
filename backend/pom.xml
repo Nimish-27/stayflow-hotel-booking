@@ -69,13 +69,6 @@
                     <include>**/*.sql</include>
                 </includes>
             </resource>
-            <resource>
-                <directory>${project.basedir}/../db/sample-data</directory>
-                <targetPath>db/sample-data</targetPath>
-                <includes>
-                    <include>**/*.sql</include>
-                </includes>
-            </resource>
         </resources>
         <plugins>
             <plugin>

@@ -10,6 +10,11 @@ public record HotelResponse(
         String location,
         String description,
         List<String> amenities,
+        String roomType,
+        List<String> roomTypes,
+        List<RoomOption> roomOptions,
+        int maxOccupancy,
+        int totalRooms,
         BigDecimal pricePerNight,
         StayQuote quote) {
 }

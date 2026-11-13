@@ -2,9 +2,9 @@
 
 | Item | Location | Purpose |
 |---|---|---|
-| `create-database.sql` | `db/` | One-time: creates `hotel_booking`, `hotel_booking_test` and the `hotel_app` user |
-| `V1__create_schema.sql` | `backend/src/main/resources/db/migration/` | Schema (Flyway) |
-| `V2__sample_hotels.sql` | `backend/src/main/resources/db/sample-data/` | Sample hotels (Flyway) |
+| `create-database.sql` | `db/setup/` | One-time: creates `hotel_booking`, `hotel_booking_test` and the `hotel_app` user |
+| `V1__create_schema.sql` | `db/migration/` | Schema (Flyway) |
+| `V3__` to `V11__` | `db/migration/` | Room metadata, room-type inventory, booking fields, GST, sample hotels, and legacy cleanup |
 
 Flyway runs the migrations automatically when the backend starts. Never edit a migration that
 has already been applied: add a new `V3__...` file instead.
@@ -12,41 +12,28 @@ has already been applied: add a new `V3__...` file instead.
 ## Setup
 
 1. Edit the password in `create-database.sql` (do not commit it), then run:
-   `mysql -u root -p < db/create-database.sql`
+   `mysql -u root -p < db/setup/create-database.sql`
 2. Export the connection settings (see `.env.example`). Spring Boot does not read `.env`
    files by itself, so export them in your shell or IDE run configuration.
 
 ## Sample data on or off
 
-`spring.flyway.locations` defaults to `classpath:db/migration,classpath:db/sample-data`.
-To start with an empty hotel table, set `FLYWAY_LOCATIONS=classpath:db/migration` **before the
-first run**. Removing a location after its migrations were applied makes Flyway's validation fail.
+Sample hotels are included in the main migration chain by V10. The legacy `db/sample-data`
+folder is no longer part of the default runtime locations. V2 remains there as an archival
+assignment-era seed script; V10 is the idempotent replacement because deployed databases cannot
+have an already-applied migration rewritten or renumbered.
 
-## Room inventory (365-day rolling window)
+## Room-type inventory (365-day rolling window)
 
-`room_inventory` is filled by `InventorySeeder` (backend), not by a migration, because a one-time
+`room_type_inventory` is filled by `InventorySeeder` (backend), not by a migration, because a one-time
 migration would run out of dates as time passes. It runs at startup and once a day, and it only
 inserts missing rows, so running it again changes nothing. The statement it runs, with literal
 dates for manual checks (the app passes the dates from its Asia/Kolkata `Clock`):
 
-```sql
-INSERT INTO room_inventory (hotel_id, stay_date, booked_rooms)
-WITH RECURSIVE days (stay_date) AS (
-    SELECT DATE '2025-01-01'
-    UNION ALL
-    SELECT stay_date + INTERVAL 1 DAY FROM days
-    WHERE stay_date < DATE '2025-01-01' + INTERVAL 371 DAY
-)
-SELECT h.id, days.stay_date, 0
-FROM hotels h
-CROSS JOIN days
-WHERE NOT EXISTS (
-    SELECT 1 FROM room_inventory ri
-    WHERE ri.hotel_id = h.id AND ri.stay_date = days.stay_date
-);
-```
-
-This inserts 372 days per hotel (365-day booking window plus a 7-day safety buffer).
+The seeder inserts one row for every configured hotel/room-type/date combination, covering 372
+days per room type and hotel (365-day booking window plus a 7-day safety buffer), using an
+idempotent `INSERT ... ON DUPLICATE KEY UPDATE` statement.
+The former `room_inventory` table was dropped by V11 because no runtime path uses it.
 
 ## Verify the scripts on a scratch database
 
@@ -67,13 +54,9 @@ SELECT VERSION();                                   -- must be >= 8.0.16
 SELECT id, name, location, price_per_night, total_rooms FROM hotels;   -- 6 rows
 
 -- paste the INSERT ... WITH RECURSIVE statement above (use today's date for both literals)
-SELECT hotel_id, COUNT(*), MIN(stay_date), MAX(stay_date)
-FROM room_inventory GROUP BY hotel_id;              -- 372 per hotel (2232 rows total)
--- run the same INSERT again: "0 rows affected" proves it is idempotent
-
--- Each of these must FAIL:
-INSERT INTO room_inventory VALUES (1, CURDATE() + INTERVAL 2000 DAY, -1);   -- 3819 CHECK
-INSERT INTO room_inventory VALUES (999, CURDATE() + INTERVAL 2000 DAY, 0);  -- 1452 foreign key
+SELECT hotel_id, room_type, COUNT(*), MIN(stay_date), MAX(stay_date)
+FROM room_type_inventory GROUP BY hotel_id, room_type; -- 372 per room type
+-- run the seeder again: "0 rows added" proves it is idempotent
 
 -- This must SUCCEED, and the same statement run a second time must FAIL (1062 duplicate reference):
 INSERT INTO bookings (reference, hotel_id, guest_name, guest_email, check_in, check_out,
